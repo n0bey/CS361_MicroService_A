@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Study Guide</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 20px;
+        }
+        h1 {
+            font-size: 36px;
+            color: #333;
+        }
+        .instructions {
+            font-size: 16px;
+            color: #555;
+            margin: 20px auto;
+            max-width: 600px;
+            text-align: left;
+            background-color: #f9f9f9;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .form-container {
+            margin-top: 20px;
+        }
+        .form-container input,
+        .form-container select {
+            margin: 10px;
+        }
+        .message {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .success {
+            color: #155724;
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+        }
+        .partial-success {
+            color: #856404;
+            background-color: #fff3cd;
+            border: 1px solid #ffeeba;
+        }
+        .error {
+            color: #721c24;
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+        }
+        a {
+            text-decoration: none;
+            color: #007bff;
+        }
+    </style>
+</head>
+<body>
+    <h1>スタディガイド</h1>
+
+    <div class="instructions">
+        <h3>Upload Your Custom List to Add to the Japanese Study Guide</h3>
+        <ol>
+            <li>Your list must be in <strong>PDF</strong> or <strong>TXT</strong> format.</li>
+            <li>Use this format for your words: <em>Kanji : Katakana = definition</em> (one word per line).<br>
+                <strong>Example:</strong><br>
+                浅い : (あさい) = shallow<br>
+                悲しい : (かなしい) = sad
+            </li>
+            <li>Save your file.</li>
+            <li>Select your <strong>Category</strong> (Noun, Adverb, etc.) and <strong>Level</strong> (N1, N2, etc.).</li>
+            <li>Upload your file!</li>
+        </ol>
+    </div>
+
+    <div class="form-container">
+        <form id="uploadForm" enctype="multipart/form-data">
+            <select name="category" id="category" required>
+                <option value="" disabled selected>Select a category</option>
+                <option value="adjectives">Adjectives</option>
+                <option value="adverbs">Adverbs</option>
+                <option value="nouns">Nouns</option>
+                <option value="verbs">Verbs</option>
+                <option value="particles">Particles</option>
+                <option value="katakana">Katakana</option>
+            </select>
+            <br>
+            <select name="level" id="level" required>
+                <option value="" disabled selected>Select a level</option>
+                <option value="N1">N1</option>
+                <option value="N2">N2</option>
+                <option value="N3">N3</option>
+                <option value="N4">N4</option>
+                <option value="N5">N5</option>
+            </select>
+            <br>
+            <input type="file" name="file" id="file" accept=".txt,.pdf" required>
+            <br>
+            <button type="submit">Upload File</button>
+        </form>
+    </div>
+
+    <div id="feedbackMessage" class="message" style="display: none;"></div>
+
+    <script>
+        document.getElementById('uploadForm').addEventListener('submit', async function (event) {
+            event.preventDefault();
+
+            const category = document.getElementById('category').value;
+            const level = document.getElementById('level').value;
+            const fileInput = document.getElementById('file');
+            const file = fileInput.files[0];
+
+            // Confirmation pop-up
+            const confirmation = confirm(
+                `You are adding "${file.name}" with category: "${category}" and level: "${level}" to the dictionary. Do you want to proceed?`
+            );
+            if (!confirmation) return;
+
+            const feedbackMessage = document.getElementById('feedbackMessage');
+            const formData = new FormData(this);
+
+            try {
+                const response = await fetch('/process', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                const result = await response.json();
+
+                feedbackMessage.style.display = 'block';
+
+                if (response.ok) {
+                    if (result.invalid_file_url) { 
+                        feedbackMessage.className = 'message partial-success';
+                        feedbackMessage.innerHTML = `
+                            Partial Success: The file "${file.name}" was processed as category: ${category} and level: ${level}, however, some line errors occurred.<br>
+                            <a href="${result.invalid_file_url}" target="_blank">Download invalid words file</a>
+                        `;
+                    } else {
+                        feedbackMessage.className = 'message success';
+                        feedbackMessage.innerHTML = `Success: File "${file.name}" processed successfully as category: ${category} - level: ${level}.`;
+                    }
+                } else {
+                    feedbackMessage.className = 'message error';
+                    feedbackMessage.innerText = `Error: ${result.error}`;
+                }
+            } catch (error) {
+                feedbackMessage.style.display = 'block';
+                feedbackMessage.className = 'message error';
+                feedbackMessage.innerText = 'An unexpected error occurred. Please try again.';
+            }
+        });
+    </script>
+</body>
+</html>
